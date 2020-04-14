@@ -1,3 +1,5 @@
+FORK OF react-boilerplate/dev with redux-toolkit pr merged in, and storybook support added
+
 <img src="https://raw.githubusercontent.com/react-boilerplate/react-boilerplate-brand/master/assets/banner-metal-optimized.jpg" alt="react boilerplate banner" align="center" />
 
 <br />
