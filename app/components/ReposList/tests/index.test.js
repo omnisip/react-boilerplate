@@ -1,11 +1,8 @@
 import React from 'react';
 import { IntlProvider } from 'react-intl';
-import { Provider } from 'react-redux';
-import { browserHistory } from 'react-router-dom';
-import { render } from 'react-testing-library';
+import { render } from '@testing-library/react';
 
 import ReposList from '../index';
-import configureStore from '../../../configureStore';
 
 describe('<ReposList />', () => {
   it('should render the loading indicator when its loading', () => {
@@ -19,16 +16,13 @@ describe('<ReposList />', () => {
         <ReposList loading={false} error={{ message: 'Loading failed!' }} />
       </IntlProvider>,
     );
-    expect(queryByText(/Something went wrong/)).not.toBeNull();
+    expect(queryByText(/Something went wrong/)).toBeInTheDocument();
   });
 
   it('should render the repositories if loading was successful', () => {
-    const store = configureStore(
-      { global: { currentUser: 'mxstbr' } },
-      browserHistory,
-    );
     const repos = [
       {
+        isOwnRepo: true,
         owner: {
           login: 'mxstbr',
         },
@@ -39,11 +33,9 @@ describe('<ReposList />', () => {
       },
     ];
     const { container } = render(
-      <Provider store={store}>
-        <IntlProvider locale="en">
-          <ReposList repos={repos} error={false} />
-        </IntlProvider>
-      </Provider>,
+      <IntlProvider locale="en">
+        <ReposList repos={repos} error={false} />
+      </IntlProvider>,
     );
 
     expect(container.firstChild).toMatchSnapshot();
@@ -54,6 +46,6 @@ describe('<ReposList />', () => {
       <ReposList repos={false} error={false} loading={false} />,
     );
 
-    expect(container.firstChild).toBeNull();
+    expect(container).toBeEmpty();
   });
 });

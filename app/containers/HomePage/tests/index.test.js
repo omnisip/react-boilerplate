@@ -3,118 +3,99 @@
  */
 
 import React from 'react';
-import { render } from 'react-testing-library';
+import { render, cleanup, fireEvent } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { Provider } from 'react-redux';
-import { browserHistory } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 
-import { HomePage, mapDispatchToProps } from '../index';
-import { changeUsername } from '../actions';
-import { loadRepos } from '../../App/actions';
+import * as reposManagerSlice from 'containers/ReposManager/slice';
 import configureStore from '../../../configureStore';
+import HomePage from '../index';
+import { initialState } from '../slice';
+
+const renderHomePage = store =>
+  render(
+    <Provider store={store}>
+      <IntlProvider locale="en">
+        <HelmetProvider>
+          <HomePage />
+        </HelmetProvider>
+      </IntlProvider>
+    </Provider>,
+  );
+
+const setUsernameInStoreAndUnmount = ({ store, username }) => {
+  // Render, update the state and unmount
+  const { container, unmount } = renderHomePage(store);
+  const input = container.querySelector('input');
+  fireEvent.change(input, { target: { value: username } });
+  unmount();
+};
 
 describe('<HomePage />', () => {
   let store;
 
   beforeAll(() => {
-    store = configureStore({}, browserHistory);
+    reposManagerSlice.loadRepos = jest.fn(() => ({ type: '' }));
+    reposManagerSlice.loadRepos.type = 'app/slice.loadRepos';
   });
+
+  beforeEach(() => {
+    store = configureStore({});
+    reposManagerSlice.loadRepos.mockClear();
+  });
+
+  afterEach(cleanup);
 
   it('should render and match the snapshot', () => {
     const {
       container: { firstChild },
-    } = render(
-      <Provider store={store}>
-        <IntlProvider locale="en">
-          <HomePage loading={false} error={false} repos={[]} />
-        </IntlProvider>
-      </Provider>,
-    );
+    } = renderHomePage(store);
     expect(firstChild).toMatchSnapshot();
   });
 
-  it('should fetch the repos on mount if a username exists', () => {
-    const submitSpy = jest.fn();
-    render(
-      <Provider store={store}>
-        <IntlProvider locale="en">
-          <HomePage
-            username="Not Empty"
-            onChangeUsername={() => {}}
-            onSubmitForm={submitSpy}
-          />
-        </IntlProvider>
-      </Provider>,
-    );
-    expect(submitSpy).toHaveBeenCalled();
+  it("shouldn't fetch repos on mount if username is empty", () => {
+    renderHomePage(store);
+    expect(initialState.username).toBe('');
+    expect(reposManagerSlice.loadRepos).not.toHaveBeenCalled();
   });
 
-  it('should not call onSubmitForm if username is an empty string', () => {
-    const submitSpy = jest.fn();
-    render(
-      <Provider store={store}>
-        <IntlProvider locale="en">
-          <HomePage onChangeUsername={() => {}} onSubmitForm={submitSpy} />
-        </IntlProvider>
-      </Provider>,
-    );
-    expect(submitSpy).not.toHaveBeenCalled();
+  it("shouldn't fetch repos on mount if username is truthy but not empty", () => {
+    setUsernameInStoreAndUnmount({ store, username: ' ' });
+
+    // Now render again to trigger useEffect
+    renderHomePage(store);
+
+    expect(reposManagerSlice.loadRepos).not.toHaveBeenCalled();
   });
 
-  it('should not call onSubmitForm if username is null', () => {
-    const submitSpy = jest.fn();
-    render(
-      <Provider store={store}>
-        <IntlProvider locale="en">
-          <HomePage
-            username=""
-            onChangeUsername={() => {}}
-            onSubmitForm={submitSpy}
-          />
-        </IntlProvider>
-      </Provider>,
-    );
-    expect(submitSpy).not.toHaveBeenCalled();
+  it('should fetch repos on mount if username is set', () => {
+    setUsernameInStoreAndUnmount({ store, username: 'julienben' });
+
+    // Now render again to trigger useEffect
+    renderHomePage(store);
+
+    expect(reposManagerSlice.loadRepos).toHaveBeenCalledTimes(1);
   });
 
-  describe('mapDispatchToProps', () => {
-    describe('onChangeUsername', () => {
-      it('should be injected', () => {
-        const dispatch = jest.fn();
-        const result = mapDispatchToProps(dispatch);
-        expect(result.onChangeUsername).toBeDefined();
-      });
+  it("shouldn't fetch repos if the form is submitted when the username is empty", () => {
+    const { container } = renderHomePage(store);
 
-      it('should dispatch changeUsername when called', () => {
-        const dispatch = jest.fn();
-        const result = mapDispatchToProps(dispatch);
-        const username = 'mxstbr';
-        result.onChangeUsername({ target: { value: username } });
-        expect(dispatch).toHaveBeenCalledWith(changeUsername(username));
-      });
-    });
+    const form = container.querySelector('form');
+    fireEvent.submit(form);
 
-    describe('onSubmitForm', () => {
-      it('should be injected', () => {
-        const dispatch = jest.fn();
-        const result = mapDispatchToProps(dispatch);
-        expect(result.onSubmitForm).toBeDefined();
-      });
+    expect(reposManagerSlice.loadRepos).not.toHaveBeenCalled();
+  });
 
-      it('should dispatch loadRepos when called', () => {
-        const dispatch = jest.fn();
-        const result = mapDispatchToProps(dispatch);
-        result.onSubmitForm();
-        expect(dispatch).toHaveBeenCalledWith(loadRepos());
-      });
+  it("should fetch repos if the form is submitted when the username isn't empty", () => {
+    const { container } = renderHomePage(store);
 
-      it('should preventDefault if called with event', () => {
-        const preventDefault = jest.fn();
-        const result = mapDispatchToProps(() => {});
-        const evt = { preventDefault };
-        result.onSubmitForm(evt);
-        expect(preventDefault).toHaveBeenCalledWith();
-      });
-    });
+    const input = container.querySelector('input');
+    fireEvent.change(input, { target: { value: 'julienben' } });
+    expect(reposManagerSlice.loadRepos).not.toHaveBeenCalled();
+
+    const form = container.querySelector('form');
+    fireEvent.submit(form);
+    expect(reposManagerSlice.loadRepos).toHaveBeenCalled();
   });
 });

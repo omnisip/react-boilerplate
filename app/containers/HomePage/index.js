@@ -2,49 +2,56 @@
  * HomePage
  *
  * This is the first thing users see of our App, at the '/' route
+ *
  */
 
-import React, { useEffect, memo } from 'react';
-import PropTypes from 'prop-types';
-import { Helmet } from 'react-helmet';
+import React, { useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { FormattedMessage } from 'react-intl';
-import { connect } from 'react-redux';
-import { compose } from 'redux';
 import { createStructuredSelector } from 'reselect';
+import { useSelector, useDispatch } from 'react-redux';
+import { useInjectReducer } from 'redux-injectors';
 
-import { useInjectReducer } from 'utils/injectReducer';
-import { useInjectSaga } from 'utils/injectSaga';
 import {
   makeSelectRepos,
   makeSelectLoading,
   makeSelectError,
-} from 'containers/App/selectors';
+} from 'containers/ReposManager/selectors';
+import { loadRepos } from 'containers/ReposManager/slice';
+
 import H2 from 'components/H2';
 import ReposList from 'components/ReposList';
-import AtPrefix from './AtPrefix';
-import CenteredSection from './CenteredSection';
-import Form from './Form';
-import Input from './Input';
-import Section from './Section';
+import AtPrefix from './components/AtPrefix';
+import CenteredSection from './components/CenteredSection';
+import Form from './components/Form';
+import Input from './components/Input';
+import Section from './components/Section';
+
 import messages from './messages';
-import { loadRepos } from '../App/actions';
-import { changeUsername } from './actions';
+import { reducer, changeUsername } from './slice';
 import { makeSelectUsername } from './selectors';
-import reducer from './reducer';
-import saga from './saga';
 
-const key = 'home';
+const stateSelector = createStructuredSelector({
+  username: makeSelectUsername(),
+  repos: makeSelectRepos(),
+  loading: makeSelectLoading(),
+  error: makeSelectError(),
+});
 
-export function HomePage({
-  username,
-  loading,
-  error,
-  repos,
-  onSubmitForm,
-  onChangeUsername,
-}) {
-  useInjectReducer({ key, reducer });
-  useInjectSaga({ key, saga });
+export default function HomePage() {
+  useInjectReducer({ key: 'home', reducer });
+
+  const dispatch = useDispatch();
+  const { repos, username, loading, error } = useSelector(stateSelector);
+
+  const onChangeUsername = evt =>
+    dispatch(changeUsername({ username: evt.target.value }));
+
+  const onSubmitForm = evt => {
+    if (evt !== undefined && evt.preventDefault) evt.preventDefault();
+    if (!username) return;
+    dispatch(loadRepos());
+  };
 
   useEffect(() => {
     // When initial state username is not null, submit the form to load repos
@@ -63,7 +70,7 @@ export function HomePage({
         <title>Home Page</title>
         <meta
           name="description"
-          content="A React.js Boilerplate application homepage"
+          content="A React Boilerplate application homepage"
         />
       </Helmet>
       <div>
@@ -100,39 +107,3 @@ export function HomePage({
     </article>
   );
 }
-
-HomePage.propTypes = {
-  loading: PropTypes.bool,
-  error: PropTypes.oneOfType([PropTypes.object, PropTypes.bool]),
-  repos: PropTypes.oneOfType([PropTypes.array, PropTypes.bool]),
-  onSubmitForm: PropTypes.func,
-  username: PropTypes.string,
-  onChangeUsername: PropTypes.func,
-};
-
-const mapStateToProps = createStructuredSelector({
-  repos: makeSelectRepos(),
-  username: makeSelectUsername(),
-  loading: makeSelectLoading(),
-  error: makeSelectError(),
-});
-
-export function mapDispatchToProps(dispatch) {
-  return {
-    onChangeUsername: evt => dispatch(changeUsername(evt.target.value)),
-    onSubmitForm: evt => {
-      if (evt !== undefined && evt.preventDefault) evt.preventDefault();
-      dispatch(loadRepos());
-    },
-  };
-}
-
-const withConnect = connect(
-  mapStateToProps,
-  mapDispatchToProps,
-);
-
-export default compose(
-  withConnect,
-  memo,
-)(HomePage);

@@ -29,7 +29,6 @@ module.exports = {
     'import/imports-first': 0,
     'import/newline-after-import': 0,
     'import/no-dynamic-require': 0,
-    'import/no-extraneous-dependencies': 0,
     'import/no-named-as-default': 0,
     'import/no-unresolved': 2,
     'import/no-webpack-loader-syntax': 0,
@@ -69,6 +68,7 @@ module.exports = {
     'react/forbid-prop-types': 0,
     'react/jsx-first-prop-new-line': [2, 'multiline'],
     'react/jsx-filename-extension': 0,
+    'react/jsx-props-no-spreading': 0,
     'react/jsx-no-target-blank': 0,
     'react/jsx-uses-vars': 2,
     'react/require-default-props': 0,
@@ -79,6 +79,28 @@ module.exports = {
     'redux-saga/yield-effects': 2,
     'require-yield': 0,
   },
+  overrides: [
+    {
+      /* internals and server folder are for dev */
+      files: ['internals/**/*.*', 'server/**/*.*' ],
+      rules: {
+        'import/no-extraneous-dependencies': 0,
+      },
+    },
+    {
+      files: ['stories/**/*.*', 'stories/*.*', '.storybook/*.*'],
+      rules: {
+       'import/no-extraneous-dependencies': 0
+      }
+    },
+    {
+      /* slice.js files contain immer-based reducers where param reassignment is a requirement */
+      files: ['**/slice.js', '**/slice.test.js'],
+      rules: {
+        'no-param-reassign': 0,
+      },
+    },
+  ],
   settings: {
     'import/resolver': {
       webpack: {

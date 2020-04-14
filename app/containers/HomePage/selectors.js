@@ -2,15 +2,12 @@
  * Homepage selectors
  */
 
-import { createSelector } from 'reselect';
-import { initialState } from './reducer';
+import { createSelector } from '@reduxjs/toolkit';
+import { initialState } from './slice';
 
 const selectHome = state => state.home || initialState;
 
 const makeSelectUsername = () =>
-  createSelector(
-    selectHome,
-    homeState => homeState.username,
-  );
+  createSelector(selectHome, homeState => homeState.username);
 
 export { selectHome, makeSelectUsername };
